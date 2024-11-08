@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+    <meta charset='utf-8' />
+    <title>my first map</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1' />
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.css" rel="stylesheet">
+   <script src="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.js"></script>
+    <style>
+     body {margin: 0; padding: 0;}
+     #map {position: absolute; top: 0; bottom: 0; width: 100%;}
+     /* the layout of the legend panel */
+     #legend {
+     position: absolute;
+     bottom: 0;
+     right: 0;
+     width: 110px;
+     background: #fff;
+     margin-right: 20px;
+     margin-bottom: 40px;
+     padding: 10px 20px 10px 10px;
+     border-radius: 3px;
+     text-align: center;
+     }
+
+     /* each line for a break */
+     .break {
+     position: relative;
+     margin: 0px;
+     padding: 0px;
+     }
+
+     /* basic style for a dot/circle */
+     .dot {
+     display: inline-block;
+     margin-top: 5px;
+     border-radius: 50%;
+     opacity: 0.6;
+     }
+
+     /* the label for the dot */
+     .dot-label {
+     position: absolute;
+     top: 0;
+     right: 0;
+     font-style: italic;
+     }
+
+     /* the text color of a hyper link */
+     a {
+     color: black
+     }
+    </style>
+</head>
+<body>
+     <div id='map'></div>
+     <div id="legend"></div>
+    <script>
+         mapboxgl.accessToken = 'pk.eyJ1Ijoic2hpcmF6dXIiLCJhIjoiY20yOGE0bGYwMW50djJxb2o1cjVzcW1uMyJ9.s-1p1wNzbF953Ua84f7H0A';
+        const mymap = new mapboxgl.Map({
+                  container: 'map',
+                  style: 'mapbox://styles/mapbox/satellite-v9',
+                  projection: 'globe', //Display the map as a globe since satellite-v9 defaults to Mercator
+                 center: [-96, 37.8],
+                 zoom:3
+                });  
+     // create legend object, it will anchor to the div element with the id legend.
+     const legend = document.getElementById('legend');
+     var grades=[2, 4.5, 8.5]
+     var radii=[4,9,17]
+     var colors=['#fdd49e','#d7301f','#7f0000']
+     //set up legend grades and labels
+     var labels = ['<strong>Magnitude Size</strong>'], vbreak;
+     //iterate through grades and create a scaled circle and label for each
+     for (var i = 0; i < grades.length; i++) {
+     vbreak = grades[i];
+     // you need to manually adjust the radius of each dot on the legend 
+     // in order to make sure the legend can be properly referred to the dot on the map.
+     dot_radius = 2 * radii[i];
+     labels.push(
+          '<p class="break"><i class="dot" style="background:' + colors[i] + '; width: ' + dot_radius +
+          'px; height: ' +
+          dot_radius + 'px; "></i> <span class="dot-label" style="top: ' + dot_radius / 2 + 'px;">' + vbreak +
+          '</span></p>');
+     }
+     const source =
+     '<p style="text-align: right; font-size:10pt">Source: <a href="https://earthquake.usgs.gov/earthquakes/">USGS</a></p>';
+
+     // combine all the html codes.
+     legend.innerHTML = labels.join('') + source;
+     mymap.on('style.load', () => {
+               mymap.setFog({}); 
+               mymap.addSource('earthquakes', {
+               type: 'geojson',
+               data: 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_month.geojson'
+          });
+               mymap.addLayer({
+               'id': 'earthquakes-layer',
+               'type': 'circle',
+               'source': 'earthquakes',
+               'paint': {
+                    'circle-radius': ['interpolate',['linear'],['get','mag'],
+                                                  1,        0.7,
+                                                  1.5,      2,
+                                                  2,        4,
+                                                  2.5,      5,
+                                                  3,        6,
+                                                  3.5,      7,
+                                                  4.5,      9,
+                                                  6.5,      15,
+                                                  8.5,      17,
+                                                  10.5,     20],
+                    'circle-stroke-width': 1,
+                    'circle-color': ['interpolate',['linear'],['get', 'mag'],
+                                                  1,  '#fff7ec',
+                                                  1.5,'#fee8c8',
+                                                  2, '#fdd49e',
+                                                  2.5, '#fdbb84',
+                                                  3, '#fc8d59',
+                                                  3.5, '#ef6548',
+                                                  4.5, '#d7301f',
+                                                  6.5, '#b30000',
+                                                  8.5, '#7f0000',
+                                                  10.5, '#000'],
+                    'circle-stroke-color': 'white'
+               }
+          });
+     });
+     // click on tree to view magnitude in a popup
+     mymap.on('click', 'earthquakes-layer', (event) => {
+          new mapboxgl.Popup()
+          .setLngLat(event.features[0].geometry.coordinates)
+          .setHTML(`<strong>Magnitude:</strong> ${event.features[0].properties.mag}`)
+          .addTo(mymap);
+     });
+     </script>
+</body>
+</html>
